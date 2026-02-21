@@ -2,6 +2,7 @@ package com.example.workouthrm.viewmodel
 
 import android.app.Application
 import android.bluetooth.BluetoothDevice
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.workouthrm.audio.JumpDetector
@@ -22,6 +23,7 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
     private val bleManager = HrmBleManager(application.applicationContext)
     private val workoutDao = WorkoutDatabase.getInstance(application.applicationContext).workoutDao()
     private val jumpDetector = JumpDetector()
+    private val prefs = application.getSharedPreferences("jump_prefs", Context.MODE_PRIVATE)
 
     val heartRate: StateFlow<Int?> = bleManager.heartRate
     val connectionState: StateFlow<ConnectionState> = bleManager.connectionState
@@ -29,6 +31,21 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
     val jumpCount: StateFlow<Int> = jumpDetector.jumpCount
 
     val workoutHistory = workoutDao.getAllDesc()
+    val savedDeviceName: String? = bleManager.savedDeviceName()
+
+    private val _sensitivity = MutableStateFlow(prefs.getInt("sensitivity", 8000))
+    val sensitivity: StateFlow<Int> = _sensitivity.asStateFlow()
+
+    init {
+        bleManager.autoConnectSaved()
+        jumpDetector.threshold = _sensitivity.value
+    }
+
+    fun setSensitivity(value: Int) {
+        _sensitivity.value = value
+        jumpDetector.threshold = value
+        prefs.edit().putInt("sensitivity", value).apply()
+    }
 
     private val _isWorkoutActive = MutableStateFlow(false)
     val isWorkoutActive: StateFlow<Boolean> = _isWorkoutActive.asStateFlow()
@@ -36,9 +53,13 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
     private val _isPaused = MutableStateFlow(false)
     val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
 
+    private val _countdown = MutableStateFlow<Int?>(null)
+    val countdown: StateFlow<Int?> = _countdown.asStateFlow()
+
     private val _elapsedSeconds = MutableStateFlow(0L)
     val elapsedSeconds: StateFlow<Long> = _elapsedSeconds.asStateFlow()
 
+    private var countdownJob: Job? = null
     private var timerJob: Job? = null
     private var workoutStartTimeMillis: Long = 0L
     private var hrReadings = mutableListOf<Int>()
@@ -64,16 +85,25 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
         _isWorkoutActive.value = true
         _isPaused.value = false
         _elapsedSeconds.value = 0L
-        workoutStartTimeMillis = System.currentTimeMillis()
         hrReadings.clear()
         jumpDetector.resetCount()
-        jumpDetector.start()
-        startTimer()
 
-        hrCollectJob = viewModelScope.launch {
-            heartRate.collect { bpm ->
-                if (bpm != null && _isWorkoutActive.value && !_isPaused.value) {
-                    hrReadings.add(bpm)
+        countdownJob = viewModelScope.launch {
+            for (i in 5 downTo 1) {
+                _countdown.value = i
+                delay(1000L)
+            }
+            _countdown.value = null
+
+            workoutStartTimeMillis = System.currentTimeMillis()
+            jumpDetector.start()
+            startTimer()
+
+            hrCollectJob = viewModelScope.launch {
+                heartRate.collect { bpm ->
+                    if (bpm != null && _isWorkoutActive.value && !_isPaused.value) {
+                        hrReadings.add(bpm)
+                    }
                 }
             }
         }
@@ -97,6 +127,9 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
 
         _isWorkoutActive.value = false
         _isPaused.value = false
+        _countdown.value = null
+        countdownJob?.cancel()
+        countdownJob = null
         timerJob?.cancel()
         timerJob = null
         hrCollectJob?.cancel()

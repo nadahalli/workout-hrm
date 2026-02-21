@@ -28,6 +28,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,8 +63,12 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, onNavigateToHistory: () -> Unit) 
     val isWorkoutActive by viewModel.isWorkoutActive.collectAsState()
     val isPaused by viewModel.isPaused.collectAsState()
     val elapsedSeconds by viewModel.elapsedSeconds.collectAsState()
+    val countdown by viewModel.countdown.collectAsState()
     val jumpCount by viewModel.jumpCount.collectAsState()
     val scannedDevices by viewModel.scannedDevices.collectAsState()
+    val sensitivity by viewModel.sensitivity.collectAsState()
+    var showScanDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -75,25 +81,33 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, onNavigateToHistory: () -> Unit) 
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Hamburger menu row
-            HamburgerMenu(onNavigateToHistory = onNavigateToHistory)
+            HamburgerMenu(
+                onNavigateToHistory = onNavigateToHistory,
+                onScanForHrm = { showScanDialog = true },
+                onSettings = { showSettingsDialog = true }
+            )
 
             // Connection status
             ConnectionStatusBadge(connectionState)
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // BPM display
             BpmDisplay(bpm)
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Jump count
             JumpCountDisplay(jumpCount)
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Timer
-            TimerDisplay(elapsedSeconds)
+            // Timer or countdown
+            if (countdown != null) {
+                CountdownDisplay(countdown!!)
+            } else {
+                TimerDisplay(elapsedSeconds)
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -147,7 +161,7 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, onNavigateToHistory: () -> Unit) 
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // HRM connection controls at the bottom
+            // HRM connection status at the bottom
             if (connectionState == ConnectionState.CONNECTED) {
                 OutlinedButton(
                     onClick = { viewModel.disconnectHrm() },
@@ -161,13 +175,87 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, onNavigateToHistory: () -> Unit) 
                     color = TextSecondary,
                     fontSize = 14.sp
                 )
-            } else {
-                DeviceScanSection(
-                    connectionState = connectionState,
-                    devices = scannedDevices,
-                    onScanClick = { viewModel.startScan() },
-                    onStopScanClick = { viewModel.stopScan() },
-                    onDeviceClick = { viewModel.connectToDevice(it.device) }
+            }
+        }
+    }
+
+    // Scan dialog overlay
+    if (showScanDialog) {
+        ScanDialog(
+            connectionState = connectionState,
+            devices = scannedDevices,
+            onScanClick = { viewModel.startScan() },
+            onStopScanClick = { viewModel.stopScan() },
+            onDeviceClick = {
+                viewModel.connectToDevice(it.device)
+                showScanDialog = false
+            },
+            onDismiss = {
+                viewModel.stopScan()
+                showScanDialog = false
+            }
+        )
+    }
+
+    // Settings dialog overlay
+    if (showSettingsDialog) {
+        SettingsDialog(
+            sensitivity = sensitivity,
+            onSensitivityChange = { viewModel.setSensitivity(it) },
+            onDismiss = { showSettingsDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun SettingsDialog(
+    sensitivity: Int,
+    onSensitivityChange: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    // Slider goes from high sensitivity (low threshold) to low sensitivity (high threshold).
+    // Invert so sliding right = more sensitive.
+    val sliderValue = 1f - (sensitivity.toFloat() / 16000f)
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = CardBg,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp)
+            ) {
+                Text(
+                    text = "Settings",
+                    color = TextPrimary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "Jump Detection Sensitivity",
+                    color = TextPrimary,
+                    fontSize = 16.sp
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Less", color = TextSecondary, fontSize = 12.sp)
+                    Text("More", color = TextSecondary, fontSize = 12.sp)
+                }
+                Slider(
+                    value = sliderValue,
+                    onValueChange = { v ->
+                        val newThreshold = ((1f - v) * 16000f).toInt().coerceIn(1000, 16000)
+                        onSensitivityChange(newThreshold)
+                    },
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color(0xFF42A5F5),
+                        activeTrackColor = Color(0xFF42A5F5)
+                    )
                 )
             }
         }
@@ -175,7 +263,11 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, onNavigateToHistory: () -> Unit) 
 }
 
 @Composable
-private fun HamburgerMenu(onNavigateToHistory: () -> Unit) {
+private fun HamburgerMenu(
+    onNavigateToHistory: () -> Unit,
+    onScanForHrm: () -> Unit,
+    onSettings: () -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxWidth()) {
@@ -191,10 +283,24 @@ private fun HamburgerMenu(onNavigateToHistory: () -> Unit) {
             onDismissRequest = { expanded = false }
         ) {
             DropdownMenuItem(
+                text = { Text("Scan for HRM") },
+                onClick = {
+                    expanded = false
+                    onScanForHrm()
+                }
+            )
+            DropdownMenuItem(
                 text = { Text("Workout History") },
                 onClick = {
                     expanded = false
                     onNavigateToHistory()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("Settings") },
+                onClick = {
+                    expanded = false
+                    onSettings()
                 }
             )
         }
@@ -269,6 +375,16 @@ private fun JumpCountDisplay(jumpCount: Int) {
 }
 
 @Composable
+private fun CountdownDisplay(seconds: Int) {
+    Text(
+        text = seconds.toString(),
+        color = Color(0xFFFFA726),
+        fontSize = 96.sp,
+        fontWeight = FontWeight.Bold
+    )
+}
+
+@Composable
 private fun TimerDisplay(elapsedSeconds: Long) {
     val minutes = elapsedSeconds / 60
     val seconds = elapsedSeconds % 60
@@ -282,90 +398,103 @@ private fun TimerDisplay(elapsedSeconds: Long) {
 
 
 @Composable
-private fun DeviceScanSection(
+private fun ScanDialog(
     connectionState: ConnectionState,
     devices: List<com.example.workouthrm.ble.ScannedDevice>,
     onScanClick: () -> Unit,
     onStopScanClick: () -> Unit,
-    onDeviceClick: (com.example.workouthrm.ble.ScannedDevice) -> Unit
+    onDeviceClick: (com.example.workouthrm.ble.ScannedDevice) -> Unit,
+    onDismiss: () -> Unit
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        if (connectionState == ConnectionState.SCANNING) {
-            Button(
-                onClick = onStopScanClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA726))
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = CardBg,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Stop Scanning",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
+                    text = "HR Monitors",
+                    color = TextPrimary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
                 )
-            }
-        } else {
-            Button(
-                onClick = onScanClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentGreen)
-            ) {
-                Text(
-                    text = "Scan for HR Monitors",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        }
+                Spacer(modifier = Modifier.height(16.dp))
 
-        if (devices.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Tap a device to connect",
-                color = TextSecondary,
-                fontSize = 14.sp
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(devices) { device ->
-                    Card(
+                if (connectionState == ConnectionState.SCANNING) {
+                    Button(
+                        onClick = onStopScanClick,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onDeviceClick(device) },
+                            .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = CardBg)
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA726))
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = device.name,
-                                    color = TextPrimary,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = device.address,
-                                    color = TextSecondary,
-                                    fontSize = 12.sp
-                                )
+                        Text("Stop Scanning", fontWeight = FontWeight.SemiBold)
+                    }
+                } else {
+                    Button(
+                        onClick = onScanClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentGreen)
+                    ) {
+                        Text("Scan", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+                if (devices.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Tap a device to connect",
+                        color = TextSecondary,
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(devices) { device ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onDeviceClick(device) },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = DarkBg)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp)
+                                ) {
+                                    Text(
+                                        text = device.name,
+                                        color = TextPrimary,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = device.address,
+                                        color = TextSecondary,
+                                        fontSize = 12.sp
+                                    )
+                                }
                             }
                         }
                     }
+                } else if (connectionState == ConnectionState.SCANNING) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Searching...",
+                        color = TextSecondary,
+                        fontSize = 14.sp
+                    )
                 }
             }
         }

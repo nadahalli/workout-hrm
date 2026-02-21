@@ -17,13 +17,13 @@ class JumpDetector {
         private const val TAG = "JumpDetector"
         private const val SAMPLE_RATE = 44100
         private const val COOLDOWN_MS = 200L
-        // Amplitude threshold (0-32767 for 16-bit PCM). Rope hitting ground
-        // produces a sharp transient well above ambient room noise.
-        private const val AMPLITUDE_THRESHOLD = 8000
     }
 
     private val _jumpCount = MutableStateFlow(0)
     val jumpCount: StateFlow<Int> = _jumpCount.asStateFlow()
+
+    @Volatile
+    var threshold: Int = 8000
 
     private var audioRecord: AudioRecord? = null
     @Volatile
@@ -75,7 +75,7 @@ class JumpDetector {
                 }
 
                 val now = System.currentTimeMillis()
-                if (maxAmplitude > AMPLITUDE_THRESHOLD && now - lastJumpTime > COOLDOWN_MS) {
+                if (maxAmplitude > threshold && now - lastJumpTime > COOLDOWN_MS) {
                     lastJumpTime = now
                     _jumpCount.value += 1
                 }

@@ -39,11 +39,15 @@ class HrmBleManager(private val context: Context) {
 
     companion object {
         private const val TAG = "HrmBleManager"
+        private const val PREFS_NAME = "hrm_prefs"
+        private const val KEY_DEVICE_ADDRESS = "last_device_address"
+        private const val KEY_DEVICE_NAME = "last_device_name"
         val HR_SERVICE_UUID: UUID = UUID.fromString("0000180d-0000-1000-8000-00805f9b34fb")
         val HR_MEASUREMENT_UUID: UUID = UUID.fromString("00002a37-0000-1000-8000-00805f9b34fb")
         val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     }
 
+    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val bluetoothManager =
         context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
@@ -187,8 +191,27 @@ class HrmBleManager(private val context: Context) {
         lastDevice = device
         autoReconnect = true
         _connectionState.value = ConnectionState.CONNECTING
+
+        // Save for auto-reconnect on next app launch
+        prefs.edit()
+            .putString(KEY_DEVICE_ADDRESS, device.address)
+            .putString(KEY_DEVICE_NAME, device.name ?: "HRM")
+            .apply()
+
         bluetoothGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
     }
+
+    fun autoConnectSaved() {
+        val address = prefs.getString(KEY_DEVICE_ADDRESS, null) ?: return
+        val device = bluetoothAdapter?.getRemoteDevice(address) ?: return
+        Log.d(TAG, "Auto-connecting to saved device: $address")
+        lastDevice = device
+        autoReconnect = true
+        _connectionState.value = ConnectionState.CONNECTING
+        bluetoothGatt = device.connectGatt(context, true, gattCallback, BluetoothDevice.TRANSPORT_LE)
+    }
+
+    fun savedDeviceName(): String? = prefs.getString(KEY_DEVICE_NAME, null)
 
     fun disconnect() {
         autoReconnect = false
