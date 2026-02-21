@@ -4,6 +4,7 @@ import android.app.Application
 import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.workouthrm.audio.JumpDetector
 import com.example.workouthrm.ble.ConnectionState
 import com.example.workouthrm.ble.HrmBleManager
 import com.example.workouthrm.ble.ScannedDevice
@@ -20,10 +21,12 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
 
     private val bleManager = HrmBleManager(application.applicationContext)
     private val workoutDao = WorkoutDatabase.getInstance(application.applicationContext).workoutDao()
+    private val jumpDetector = JumpDetector()
 
     val heartRate: StateFlow<Int?> = bleManager.heartRate
     val connectionState: StateFlow<ConnectionState> = bleManager.connectionState
     val scannedDevices: StateFlow<List<ScannedDevice>> = bleManager.scannedDevices
+    val jumpCount: StateFlow<Int> = jumpDetector.jumpCount
 
     val workoutHistory = workoutDao.getAllDesc()
 
@@ -63,6 +66,8 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
         _elapsedSeconds.value = 0L
         workoutStartTimeMillis = System.currentTimeMillis()
         hrReadings.clear()
+        jumpDetector.resetCount()
+        jumpDetector.start()
         startTimer()
 
         hrCollectJob = viewModelScope.launch {
@@ -78,10 +83,12 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
         _isPaused.value = true
         timerJob?.cancel()
         timerJob = null
+        jumpDetector.stop()
     }
 
     fun resumeWorkout() {
         _isPaused.value = false
+        jumpDetector.start()
         startTimer()
     }
 
@@ -94,16 +101,19 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
         timerJob = null
         hrCollectJob?.cancel()
         hrCollectJob = null
+        jumpDetector.stop()
 
         val duration = _elapsedSeconds.value
         if (duration > 0) {
             val avgHr = if (hrReadings.isNotEmpty()) hrReadings.average().toInt() else null
+            val jumps = jumpCount.value
             viewModelScope.launch {
                 workoutDao.insert(
                     WorkoutEntity(
                         startTimeMillis = workoutStartTimeMillis,
                         durationSeconds = duration,
-                        avgHeartRate = avgHr
+                        avgHeartRate = avgHr,
+                        jumpCount = if (jumps > 0) jumps else null
                     )
                 )
             }

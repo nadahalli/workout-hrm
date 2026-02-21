@@ -61,6 +61,7 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, onNavigateToHistory: () -> Unit) 
     val isWorkoutActive by viewModel.isWorkoutActive.collectAsState()
     val isPaused by viewModel.isPaused.collectAsState()
     val elapsedSeconds by viewModel.elapsedSeconds.collectAsState()
+    val jumpCount by viewModel.jumpCount.collectAsState()
     val scannedDevices by viewModel.scannedDevices.collectAsState()
 
     Surface(
@@ -82,14 +83,19 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, onNavigateToHistory: () -> Unit) 
             Spacer(modifier = Modifier.height(48.dp))
 
             // BPM display
-            BpmDisplay(bpm, connectionState)
+            BpmDisplay(bpm)
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Jump count
+            JumpCountDisplay(jumpCount)
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Timer
             TimerDisplay(elapsedSeconds)
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Workout controls
             if (!isWorkoutActive) {
@@ -225,7 +231,7 @@ private fun ConnectionStatusBadge(state: ConnectionState) {
 }
 
 @Composable
-private fun BpmDisplay(bpm: Int?, connectionState: ConnectionState) {
+private fun BpmDisplay(bpm: Int?) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = bpm?.toString() ?: "--",
@@ -237,7 +243,26 @@ private fun BpmDisplay(bpm: Int?, connectionState: ConnectionState) {
         Text(
             text = "BPM",
             color = TextSecondary,
-            fontSize = 24.sp,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Light
+        )
+    }
+}
+
+@Composable
+private fun JumpCountDisplay(jumpCount: Int) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = jumpCount.toString(),
+            color = Color(0xFF42A5F5),
+            fontSize = 96.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = "JUMPS",
+            color = TextSecondary,
+            fontSize = 18.sp,
             fontWeight = FontWeight.Light
         )
     }

@@ -8,5 +8,6 @@ data class WorkoutEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val startTimeMillis: Long,
     val durationSeconds: Long,
-    val avgHeartRate: Int?
+    val avgHeartRate: Int?,
+    val jumpCount: Int?
 )

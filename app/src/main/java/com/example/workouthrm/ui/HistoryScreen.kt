@@ -34,6 +34,7 @@ private val CardBg = Color(0xFF1E1E1E)
 private val TextPrimary = Color(0xFFFFFFFF)
 private val TextSecondary = Color(0xFFB0B0B0)
 private val AccentRed = Color(0xFFEF5350)
+private val AccentBlue = Color(0xFF42A5F5)
 
 @Composable
 fun HistoryScreen(viewModel: WorkoutViewModel) {
@@ -119,6 +120,19 @@ private fun WorkoutCard(workout: WorkoutEntity) {
                     )
                     Text(
                         text = "Avg BPM",
+                        color = TextSecondary,
+                        fontSize = 12.sp
+                    )
+                }
+                Column {
+                    Text(
+                        text = workout.jumpCount?.toString() ?: "--",
+                        color = if (workout.jumpCount != null) AccentBlue else TextSecondary,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Jumps",
                         color = TextSecondary,
                         fontSize = 12.sp
                     )
