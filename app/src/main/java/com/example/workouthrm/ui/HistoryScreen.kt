@@ -13,13 +13,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,6 +43,7 @@ private val AccentBlue = Color(0xFF42A5F5)
 @Composable
 fun HistoryScreen(viewModel: WorkoutViewModel) {
     val workouts by viewModel.workoutHistory.collectAsState(initial = emptyList())
+    val context = LocalContext.current
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -65,6 +70,19 @@ fun HistoryScreen(viewModel: WorkoutViewModel) {
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        OutlinedButton(
+                            onClick = { viewModel.exportCsv(context) },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentBlue)
+                        ) {
+                            Text("Export CSV", fontSize = 14.sp)
+                        }
+                    }
+                }
                 items(workouts) { workout ->
                     WorkoutCard(workout)
                 }

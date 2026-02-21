@@ -12,4 +12,7 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM workouts ORDER BY startTimeMillis DESC")
     fun getAllDesc(): Flow<List<WorkoutEntity>>
+
+    @Query("SELECT * FROM workouts ORDER BY startTimeMillis DESC")
+    suspend fun getAll(): List<WorkoutEntity>
 }

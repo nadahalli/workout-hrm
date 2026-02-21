@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.workouthrm.ble.ConnectionState
+import com.example.workouthrm.viewmodel.WorkoutSummary
 import com.example.workouthrm.viewmodel.WorkoutViewModel
 
 private val DarkBg = Color(0xFF121212)
@@ -65,6 +66,7 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, onNavigateToHistory: () -> Unit) 
     val elapsedSeconds by viewModel.elapsedSeconds.collectAsState()
     val countdown by viewModel.countdown.collectAsState()
     val jumpCount by viewModel.jumpCount.collectAsState()
+    val jumpsPerMinute by viewModel.jumpsPerMinute.collectAsState()
     val scannedDevices by viewModel.scannedDevices.collectAsState()
     val sensitivity by viewModel.sensitivity.collectAsState()
     var showScanDialog by remember { mutableStateOf(false) }
@@ -98,7 +100,7 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, onNavigateToHistory: () -> Unit) 
             Spacer(modifier = Modifier.height(12.dp))
 
             // Jump count
-            JumpCountDisplay(jumpCount)
+            JumpCountDisplay(jumpCount, jumpsPerMinute, isWorkoutActive && elapsedSeconds > 0)
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -199,10 +201,22 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, onNavigateToHistory: () -> Unit) 
 
     // Settings dialog overlay
     if (showSettingsDialog) {
+        val beepInterval by viewModel.beepInterval.collectAsState()
         SettingsDialog(
             sensitivity = sensitivity,
             onSensitivityChange = { viewModel.setSensitivity(it) },
+            beepInterval = beepInterval,
+            onBeepIntervalChange = { viewModel.setBeepInterval(it) },
             onDismiss = { showSettingsDialog = false }
+        )
+    }
+
+    // Workout summary dialog
+    val workoutSummary by viewModel.workoutSummary.collectAsState()
+    workoutSummary?.let { summary ->
+        SummaryDialog(
+            summary = summary,
+            onDismiss = { viewModel.dismissSummary() }
         )
     }
 }
@@ -211,6 +225,8 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, onNavigateToHistory: () -> Unit) 
 private fun SettingsDialog(
     sensitivity: Int,
     onSensitivityChange: (Int) -> Unit,
+    beepInterval: Int,
+    onBeepIntervalChange: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
     // Slider goes from high sensitivity (low threshold) to low sensitivity (high threshold).
@@ -257,8 +273,130 @@ private fun SettingsDialog(
                         activeTrackColor = Color(0xFF42A5F5)
                     )
                 )
+
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    text = "Beep Every X Jumps",
+                    color = TextPrimary,
+                    fontSize = 16.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val options = listOf(0 to "Off", 100 to "100", 200 to "200", 400 to "400")
+                    for ((value, label) in options) {
+                        val selected = beepInterval == value
+                        Button(
+                            onClick = { onBeepIntervalChange(value) },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (selected) Color(0xFF42A5F5) else Color(0xFF2A2A2A)
+                            )
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 13.sp,
+                                color = if (selected) Color.White else TextSecondary
+                            )
+                        }
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun SummaryDialog(summary: WorkoutSummary, onDismiss: () -> Unit) {
+    val minutes = summary.durationSeconds / 60
+    val seconds = summary.durationSeconds % 60
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = CardBg,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Workout Complete",
+                    color = TextPrimary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    SummaryItem(
+                        value = "%d:%02d".format(minutes, seconds),
+                        label = "Duration",
+                        color = TextPrimary
+                    )
+                    SummaryItem(
+                        value = summary.avgHeartRate?.toString() ?: "--",
+                        label = "Avg BPM",
+                        color = AccentRed
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    SummaryItem(
+                        value = summary.jumpCount?.toString() ?: "--",
+                        label = "Jumps",
+                        color = Color(0xFF42A5F5)
+                    )
+                    SummaryItem(
+                        value = summary.jumpsPerMinute?.let { "%.1f".format(it) } ?: "--",
+                        label = "Jumps/min",
+                        color = Color(0xFF42A5F5)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentGreen)
+                ) {
+                    Text("Done", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryItem(value: String, label: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value,
+            color = color,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = label,
+            color = TextSecondary,
+            fontSize = 13.sp
+        )
     }
 }
 
@@ -356,7 +494,7 @@ private fun BpmDisplay(bpm: Int?) {
 }
 
 @Composable
-private fun JumpCountDisplay(jumpCount: Int) {
+private fun JumpCountDisplay(jumpCount: Int, jumpsPerMinute: Double, showJpm: Boolean) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = jumpCount.toString(),
@@ -371,6 +509,14 @@ private fun JumpCountDisplay(jumpCount: Int) {
             fontSize = 18.sp,
             fontWeight = FontWeight.Light
         )
+        if (showJpm) {
+            Text(
+                text = "%.1f /min".format(jumpsPerMinute),
+                color = Color(0xFF42A5F5),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Light
+            )
+        }
     }
 }
 
