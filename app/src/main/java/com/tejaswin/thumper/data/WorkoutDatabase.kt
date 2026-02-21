@@ -1,4 +1,4 @@
-package com.example.workouthrm.data
+package com.tejaswin.thumper.data
 
 import android.content.Context
 import androidx.room.Database

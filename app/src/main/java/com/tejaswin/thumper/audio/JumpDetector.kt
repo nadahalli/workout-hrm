@@ -1,4 +1,4 @@
-package com.example.workouthrm.audio
+package com.tejaswin.thumper.audio
 
 import android.annotation.SuppressLint
 import android.media.AudioFormat

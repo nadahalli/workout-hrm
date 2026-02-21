@@ -1,4 +1,4 @@
-package com.example.workouthrm.ble
+package com.tejaswin.thumper.ble
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter

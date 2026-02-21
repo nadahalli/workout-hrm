@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.workouthrm"
+    namespace = "com.tejaswin.thumper"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.workouthrm"
+        applicationId = "com.tejaswin.thumper"
         minSdk = 31
         targetSdk = 34
         versionCode = 1

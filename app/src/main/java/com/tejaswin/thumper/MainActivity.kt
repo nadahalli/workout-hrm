@@ -1,4 +1,4 @@
-package com.example.workouthrm
+package com.tejaswin.thumper
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -41,9 +41,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.workouthrm.ui.HistoryScreen
-import com.example.workouthrm.ui.WorkoutScreen
-import com.example.workouthrm.viewmodel.WorkoutViewModel
+import com.tejaswin.thumper.ui.HistoryScreen
+import com.tejaswin.thumper.ui.WorkoutScreen
+import com.tejaswin.thumper.viewmodel.WorkoutViewModel
 
 class MainActivity : ComponentActivity() {
 

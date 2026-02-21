@@ -1,4 +1,4 @@
-# HR-Jump
+# Thumper
 
 A minimal jump rope workout app for Android with BLE heart rate monitoring and mic-based jump counting.
 
@@ -42,7 +42,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 Single-activity Compose app, MVVM pattern.
 
 ```
-com.example.workouthrm/
+com.tejaswin.thumper/
   MainActivity.kt           Navigation, permissions, keep-screen-on
   viewmodel/
     WorkoutViewModel.kt      All state: timer, HR collection, beep, export

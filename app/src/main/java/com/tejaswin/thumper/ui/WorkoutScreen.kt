@@ -1,4 +1,4 @@
-package com.example.workouthrm.ui
+package com.tejaswin.thumper.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,9 +46,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.workouthrm.ble.ConnectionState
-import com.example.workouthrm.viewmodel.WorkoutSummary
-import com.example.workouthrm.viewmodel.WorkoutViewModel
+import com.tejaswin.thumper.ble.ConnectionState
+import com.tejaswin.thumper.viewmodel.WorkoutSummary
+import com.tejaswin.thumper.viewmodel.WorkoutViewModel
 
 private val DarkBg = Color(0xFF121212)
 private val CardBg = Color(0xFF1E1E1E)
@@ -546,10 +546,10 @@ private fun TimerDisplay(elapsedSeconds: Long) {
 @Composable
 private fun ScanDialog(
     connectionState: ConnectionState,
-    devices: List<com.example.workouthrm.ble.ScannedDevice>,
+    devices: List<com.tejaswin.thumper.ble.ScannedDevice>,
     onScanClick: () -> Unit,
     onStopScanClick: () -> Unit,
-    onDeviceClick: (com.example.workouthrm.ble.ScannedDevice) -> Unit,
+    onDeviceClick: (com.tejaswin.thumper.ble.ScannedDevice) -> Unit,
     onDismiss: () -> Unit
 ) {
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {

@@ -1,4 +1,4 @@
-package com.example.workouthrm.ui
+package com.tejaswin.thumper.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,8 +27,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.workouthrm.data.WorkoutEntity
-import com.example.workouthrm.viewmodel.WorkoutViewModel
+import com.tejaswin.thumper.data.WorkoutEntity
+import com.tejaswin.thumper.viewmodel.WorkoutViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

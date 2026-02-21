@@ -1,4 +1,4 @@
-package com.example.workouthrm.data
+package com.tejaswin.thumper.data
 
 import androidx.room.Dao
 import androidx.room.Insert

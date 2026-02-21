@@ -1,4 +1,4 @@
-package com.example.workouthrm.viewmodel
+package com.tejaswin.thumper.viewmodel
 
 import android.app.Application
 import android.bluetooth.BluetoothDevice
@@ -14,12 +14,12 @@ import androidx.lifecycle.viewModelScope
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import com.example.workouthrm.audio.JumpDetector
-import com.example.workouthrm.ble.ConnectionState
-import com.example.workouthrm.ble.HrmBleManager
-import com.example.workouthrm.ble.ScannedDevice
-import com.example.workouthrm.data.WorkoutDatabase
-import com.example.workouthrm.data.WorkoutEntity
+import com.tejaswin.thumper.audio.JumpDetector
+import com.tejaswin.thumper.ble.ConnectionState
+import com.tejaswin.thumper.ble.HrmBleManager
+import com.tejaswin.thumper.ble.ScannedDevice
+import com.tejaswin.thumper.data.WorkoutDatabase
+import com.tejaswin.thumper.data.WorkoutEntity
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
