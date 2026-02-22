@@ -6,9 +6,8 @@ A minimal jump rope workout app for Android with BLE heart rate monitoring and m
 
 - **Heart rate monitoring** via any Bluetooth Low Energy HR strap (auto-reconnects to last device)
 - **Jump counting** using the phone's microphone to detect rope impacts
-- **Live jumps per minute** displayed during workouts
 - **Workout timer** with 5-second countdown, pause/resume
-- **Workout summary** dialog after stopping (duration, avg BPM, jumps, JPM)
+- **Workout summary** dialog after stopping (duration, avg BPM, jumps, jumps per minute)
 - **Workout history** stored locally with Room
 - **TCX export** of individual or all workouts to Downloads (compatible with Garmin, Strava, etc.)
 - **Adjustable sensitivity** for jump detection threshold
