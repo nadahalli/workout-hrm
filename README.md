@@ -2,6 +2,10 @@
 
 A minimal jump rope workout app for Android with BLE heart rate monitoring and mic-based jump counting.
 
+<p align="center">
+  <img src="assets/thumper.jpg" alt="Thumper workout screen" width="300">
+</p>
+
 ## Features
 
 - **Heart rate monitoring** via any Bluetooth Low Energy HR strap (auto-reconnects to last device)
@@ -49,7 +53,7 @@ com.tejaswin.thumper/
     JumpAnalyzer.kt            Pure amplitude/cooldown logic (no Android deps)
     JumpDetector.kt            Mic recording, delegates to JumpAnalyzer
   data/
-    WorkoutDatabase.kt         Room DB (v3, with workout samples)
+    WorkoutDatabase.kt         Room DB (v4, with workout samples)
     WorkoutDao.kt              Queries
     WorkoutEntity.kt           Workout schema
     WorkoutSampleEntity.kt     Per-workout trackpoint samples (HR, jump count)
