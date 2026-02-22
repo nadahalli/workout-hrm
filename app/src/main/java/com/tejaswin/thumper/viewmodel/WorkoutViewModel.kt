@@ -96,41 +96,7 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
     private fun buildTcx(
         workouts: List<WorkoutEntity>,
         samplesByWorkout: Map<Long, List<WorkoutSampleEntity>>
-    ): String {
-        val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
-            timeZone = java.util.TimeZone.getTimeZone("UTC")
-        }
-        return buildString {
-            appendLine("""<?xml version="1.0" encoding="UTF-8"?>""")
-            appendLine("""<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">""")
-            appendLine("  <Activities>")
-            for (workout in workouts) {
-                val startIso = isoFormat.format(Date(workout.startTimeMillis))
-                appendLine("""    <Activity Sport="Other">""")
-                appendLine("      <Id>$startIso</Id>")
-                appendLine("      <Lap StartTime=\"$startIso\">")
-                appendLine("        <TotalTimeSeconds>${workout.durationSeconds}</TotalTimeSeconds>")
-                appendLine("        <Calories>0</Calories>")
-                appendLine("        <Intensity>Active</Intensity>")
-                appendLine("        <TriggerMethod>Manual</TriggerMethod>")
-                appendLine("        <Track>")
-                val samples = samplesByWorkout[workout.id] ?: emptyList()
-                for (sample in samples) {
-                    appendLine("          <Trackpoint>")
-                    appendLine("            <Time>${isoFormat.format(Date(sample.timestampMillis))}</Time>")
-                    if (sample.heartRate != null) {
-                        appendLine("            <HeartRateBpm><Value>${sample.heartRate}</Value></HeartRateBpm>")
-                    }
-                    appendLine("          </Trackpoint>")
-                }
-                appendLine("        </Track>")
-                appendLine("      </Lap>")
-                appendLine("    </Activity>")
-            }
-            appendLine("  </Activities>")
-            appendLine("</TrainingCenterDatabase>")
-        }
-    }
+    ): String = com.tejaswin.thumper.viewmodel.buildTcx(workouts, samplesByWorkout)
 
     private fun writeToDownloads(context: Context, fileName: String, content: String) {
         val values = ContentValues().apply {
@@ -307,5 +273,44 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
         super.onCleared()
         stopWorkout()
         bleManager.disconnect()
+    }
+}
+
+internal fun buildTcx(
+    workouts: List<WorkoutEntity>,
+    samplesByWorkout: Map<Long, List<WorkoutSampleEntity>>
+): String {
+    val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+        timeZone = java.util.TimeZone.getTimeZone("UTC")
+    }
+    return buildString {
+        appendLine("""<?xml version="1.0" encoding="UTF-8"?>""")
+        appendLine("""<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">""")
+        appendLine("  <Activities>")
+        for (workout in workouts) {
+            val startIso = isoFormat.format(Date(workout.startTimeMillis))
+            appendLine("""    <Activity Sport="Other">""")
+            appendLine("      <Id>$startIso</Id>")
+            appendLine("      <Lap StartTime=\"$startIso\">")
+            appendLine("        <TotalTimeSeconds>${workout.durationSeconds}</TotalTimeSeconds>")
+            appendLine("        <Calories>0</Calories>")
+            appendLine("        <Intensity>Active</Intensity>")
+            appendLine("        <TriggerMethod>Manual</TriggerMethod>")
+            appendLine("        <Track>")
+            val samples = samplesByWorkout[workout.id] ?: emptyList()
+            for (sample in samples) {
+                appendLine("          <Trackpoint>")
+                appendLine("            <Time>${isoFormat.format(Date(sample.timestampMillis))}</Time>")
+                if (sample.heartRate != null) {
+                    appendLine("            <HeartRateBpm><Value>${sample.heartRate}</Value></HeartRateBpm>")
+                }
+                appendLine("          </Trackpoint>")
+            }
+            appendLine("        </Track>")
+            appendLine("      </Lap>")
+            appendLine("    </Activity>")
+        }
+        appendLine("  </Activities>")
+        appendLine("</TrainingCenterDatabase>")
     }
 }
