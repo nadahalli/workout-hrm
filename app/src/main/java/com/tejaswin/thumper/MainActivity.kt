@@ -145,7 +145,7 @@ private fun PermissionScreen(onRequestPermissions: () -> Unit) {
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "Bluetooth permissions are required to connect to your heart rate monitor.",
+                text = "Bluetooth permissions are required to connect to your heart rate monitor. Microphone permission is required to hear the jump rope making contact with the ground.",
                 color = Color.White,
                 fontSize = 16.sp
             )

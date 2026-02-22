@@ -418,7 +418,7 @@ private fun HamburgerMenu(
 @Composable
 private fun ConnectionStatusBadge(state: ConnectionState) {
     val (color, label) = when (state) {
-        ConnectionState.DISCONNECTED -> TextSecondary to "Disconnected"
+        ConnectionState.DISCONNECTED -> TextSecondary to "HRM Disconnected"
         ConnectionState.SCANNING -> Color(0xFFFFA726) to "Scanning..."
         ConnectionState.CONNECTING -> Color(0xFFFFA726) to "Connecting..."
         ConnectionState.CONNECTED -> AccentGreen to "Connected"
