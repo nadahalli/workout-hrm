@@ -4,8 +4,6 @@ import android.app.Application
 import android.bluetooth.BluetoothDevice
 import android.content.ContentValues
 import android.content.Context
-import android.media.AudioManager
-import android.media.ToneGenerator
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
@@ -20,6 +18,7 @@ import com.tejaswin.thumper.ble.HrmBleManager
 import com.tejaswin.thumper.ble.ScannedDevice
 import com.tejaswin.thumper.data.WorkoutDatabase
 import com.tejaswin.thumper.data.WorkoutEntity
+import com.tejaswin.thumper.data.WorkoutSampleEntity
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,70 +51,105 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
     private val _sensitivity = MutableStateFlow(prefs.getInt("sensitivity", 8000))
     val sensitivity: StateFlow<Int> = _sensitivity.asStateFlow()
 
-    private val _jumpsPerMinute = MutableStateFlow(0.0)
-    val jumpsPerMinute: StateFlow<Double> = _jumpsPerMinute.asStateFlow()
-
-    private val _beepInterval = MutableStateFlow(prefs.getInt("beep_interval", 0))
-    val beepInterval: StateFlow<Int> = _beepInterval.asStateFlow()
-
     private val _workoutSummary = MutableStateFlow<WorkoutSummary?>(null)
     val workoutSummary: StateFlow<WorkoutSummary?> = _workoutSummary.asStateFlow()
-
-    private var toneGenerator: ToneGenerator? = null
-    private var beepJob: Job? = null
 
     init {
         bleManager.autoConnectSaved()
         jumpDetector.threshold = _sensitivity.value
     }
 
-    fun setBeepInterval(value: Int) {
-        _beepInterval.value = value
-        prefs.edit().putInt("beep_interval", value).apply()
-    }
-
     fun dismissSummary() {
         _workoutSummary.value = null
     }
 
-    fun exportCsv(context: Context) {
+    fun exportTcx(context: Context, workoutId: Long) {
+        viewModelScope.launch {
+            val workout = workoutDao.getById(workoutId)
+            if (workout == null) {
+                Toast.makeText(context, "Workout not found", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            val samples = workoutDao.getSamplesForWorkout(workoutId)
+            val tcx = buildTcx(listOf(workout), mapOf(workoutId to samples))
+            val fileName = SimpleDateFormat("yyyy-MM-dd-HHmm", Locale.getDefault())
+                .format(Date(workout.startTimeMillis))
+            writeToDownloads(context, "workout-$fileName.tcx", tcx)
+        }
+    }
+
+    fun exportAllTcx(context: Context) {
         viewModelScope.launch {
             val workouts = workoutDao.getAll()
             if (workouts.isEmpty()) {
                 Toast.makeText(context, "No workouts to export", Toast.LENGTH_SHORT).show()
                 return@launch
             }
+            val samplesByWorkout = workouts.associate { w ->
+                w.id to workoutDao.getSamplesForWorkout(w.id)
+            }
+            val tcx = buildTcx(workouts, samplesByWorkout)
+            writeToDownloads(context, "workouts-export.tcx", tcx)
+        }
+    }
 
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-            val csv = buildString {
-                appendLine("Date,Duration (s),Avg HR,Jumps")
-                for (w in workouts) {
-                    val date = dateFormat.format(Date(w.startTimeMillis))
-                    appendLine("$date,${w.durationSeconds},${w.avgHeartRate ?: ""},${w.jumpCount ?: ""}")
+    private fun buildTcx(
+        workouts: List<WorkoutEntity>,
+        samplesByWorkout: Map<Long, List<WorkoutSampleEntity>>
+    ): String {
+        val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+        return buildString {
+            appendLine("""<?xml version="1.0" encoding="UTF-8"?>""")
+            appendLine("""<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">""")
+            appendLine("  <Activities>")
+            for (workout in workouts) {
+                val startIso = isoFormat.format(Date(workout.startTimeMillis))
+                appendLine("""    <Activity Sport="Other">""")
+                appendLine("      <Id>$startIso</Id>")
+                appendLine("      <Lap StartTime=\"$startIso\">")
+                appendLine("        <TotalTimeSeconds>${workout.durationSeconds}</TotalTimeSeconds>")
+                appendLine("        <Calories>0</Calories>")
+                appendLine("        <Intensity>Active</Intensity>")
+                appendLine("        <TriggerMethod>Manual</TriggerMethod>")
+                appendLine("        <Track>")
+                val samples = samplesByWorkout[workout.id] ?: emptyList()
+                for (sample in samples) {
+                    appendLine("          <Trackpoint>")
+                    appendLine("            <Time>${isoFormat.format(Date(sample.timestampMillis))}</Time>")
+                    if (sample.heartRate != null) {
+                        appendLine("            <HeartRateBpm><Value>${sample.heartRate}</Value></HeartRateBpm>")
+                    }
+                    appendLine("          </Trackpoint>")
                 }
+                appendLine("        </Track>")
+                appendLine("      </Lap>")
+                appendLine("    </Activity>")
             }
+            appendLine("  </Activities>")
+            appendLine("</TrainingCenterDatabase>")
+        }
+    }
 
-            val values = ContentValues().apply {
-                put(MediaStore.Downloads.DISPLAY_NAME, "hr-jump-export.csv")
-                put(MediaStore.Downloads.MIME_TYPE, "text/csv")
-                put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-            }
-
-            val resolver = context.contentResolver
-            // Delete existing file with same name if present
-            resolver.delete(
-                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                "${MediaStore.Downloads.DISPLAY_NAME} = ?",
-                arrayOf("hr-jump-export.csv")
-            )
-
-            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-            if (uri != null) {
-                resolver.openOutputStream(uri)?.use { it.write(csv.toByteArray()) }
-                Toast.makeText(context, "Exported to Downloads/hr-jump-export.csv", Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
-            }
+    private fun writeToDownloads(context: Context, fileName: String, content: String) {
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+            put(MediaStore.Downloads.MIME_TYPE, "application/vnd.garmin.tcx+xml")
+            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
+        val resolver = context.contentResolver
+        resolver.delete(
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+            "${MediaStore.Downloads.DISPLAY_NAME} = ?",
+            arrayOf(fileName)
+        )
+        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+        if (uri != null) {
+            resolver.openOutputStream(uri)?.use { it.write(content.toByteArray()) }
+            Toast.makeText(context, "Exported to Downloads/$fileName", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -142,6 +176,7 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
     private var workoutStartTimeMillis: Long = 0L
     private var hrReadings = mutableListOf<Int>()
     private var hrCollectJob: Job? = null
+    private var currentWorkoutId: Long = 0L
 
     fun startScan() {
         bleManager.startScan()
@@ -163,7 +198,6 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
         _isWorkoutActive.value = true
         _isPaused.value = false
         _elapsedSeconds.value = 0L
-        _jumpsPerMinute.value = 0.0
         hrReadings.clear()
         jumpDetector.resetCount()
 
@@ -175,9 +209,16 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
             _countdown.value = null
 
             workoutStartTimeMillis = System.currentTimeMillis()
+            currentWorkoutId = workoutDao.insert(
+                WorkoutEntity(
+                    startTimeMillis = workoutStartTimeMillis,
+                    durationSeconds = 0,
+                    avgHeartRate = null,
+                    jumpCount = null
+                )
+            )
             jumpDetector.start()
             startTimer()
-            startBeepWatcher()
 
             hrCollectJob = viewModelScope.launch {
                 heartRate.collect { bpm ->
@@ -214,10 +255,6 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
         timerJob = null
         hrCollectJob?.cancel()
         hrCollectJob = null
-        beepJob?.cancel()
-        beepJob = null
-        toneGenerator?.release()
-        toneGenerator = null
         jumpDetector.stop()
 
         val duration = _elapsedSeconds.value
@@ -234,8 +271,9 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
             )
 
             viewModelScope.launch {
-                workoutDao.insert(
+                workoutDao.update(
                     WorkoutEntity(
+                        id = currentWorkoutId,
                         startTimeMillis = workoutStartTimeMillis,
                         durationSeconds = duration,
                         avgHeartRate = avgHr,
@@ -251,24 +289,15 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
             while (true) {
                 delay(1000L)
                 _elapsedSeconds.value += 1
-                val elapsed = _elapsedSeconds.value
-                val jumps = jumpCount.value.toDouble()
-                _jumpsPerMinute.value = if (elapsed > 0) jumps / (elapsed / 60.0) else 0.0
-            }
-        }
-    }
-
-    private fun startBeepWatcher() {
-        toneGenerator = try {
-            ToneGenerator(AudioManager.STREAM_MUSIC, ToneGenerator.MAX_VOLUME)
-        } catch (_: Exception) {
-            null
-        }
-        beepJob = viewModelScope.launch {
-            jumpDetector.jumpCount.collect { count ->
-                val interval = _beepInterval.value
-                if (interval > 0 && count > 0 && count % interval == 0) {
-                    toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 150)
+                if (_elapsedSeconds.value % 5 == 0L) {
+                    workoutDao.insertSample(
+                        WorkoutSampleEntity(
+                            workoutId = currentWorkoutId,
+                            timestampMillis = System.currentTimeMillis(),
+                            heartRate = heartRate.value,
+                            jumpCount = jumpCount.value
+                        )
+                    )
                 }
             }
         }

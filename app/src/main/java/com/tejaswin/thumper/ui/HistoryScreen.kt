@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -76,15 +77,15 @@ fun HistoryScreen(viewModel: WorkoutViewModel) {
                         horizontalArrangement = Arrangement.End
                     ) {
                         OutlinedButton(
-                            onClick = { viewModel.exportCsv(context) },
+                            onClick = { viewModel.exportAllTcx(context) },
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentBlue)
                         ) {
-                            Text("Export CSV", fontSize = 14.sp)
+                            Text("Export All TCX", fontSize = 14.sp)
                         }
                     }
                 }
                 items(workouts) { workout ->
-                    WorkoutCard(workout)
+                    WorkoutCard(workout, onExportTcx = { viewModel.exportTcx(context, workout.id) })
                 }
             }
         }
@@ -92,7 +93,7 @@ fun HistoryScreen(viewModel: WorkoutViewModel) {
 }
 
 @Composable
-private fun WorkoutCard(workout: WorkoutEntity) {
+private fun WorkoutCard(workout: WorkoutEntity, onExportTcx: () -> Unit) {
     val dateFormat = SimpleDateFormat("MMM d, yyyy  h:mm a", Locale.getDefault())
     val date = dateFormat.format(Date(workout.startTimeMillis))
 
@@ -106,11 +107,24 @@ private fun WorkoutCard(workout: WorkoutEntity) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = date,
-                color = TextSecondary,
-                fontSize = 14.sp
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = date,
+                    color = TextSecondary,
+                    fontSize = 14.sp
+                )
+                OutlinedButton(
+                    onClick = onExportTcx,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentBlue),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Text("TCX", fontSize = 12.sp)
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),

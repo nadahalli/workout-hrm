@@ -66,7 +66,6 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, onNavigateToHistory: () -> Unit) 
     val elapsedSeconds by viewModel.elapsedSeconds.collectAsState()
     val countdown by viewModel.countdown.collectAsState()
     val jumpCount by viewModel.jumpCount.collectAsState()
-    val jumpsPerMinute by viewModel.jumpsPerMinute.collectAsState()
     val scannedDevices by viewModel.scannedDevices.collectAsState()
     val sensitivity by viewModel.sensitivity.collectAsState()
     var showScanDialog by remember { mutableStateOf(false) }
@@ -100,7 +99,7 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, onNavigateToHistory: () -> Unit) 
             Spacer(modifier = Modifier.height(12.dp))
 
             // Jump count
-            JumpCountDisplay(jumpCount, jumpsPerMinute, isWorkoutActive && elapsedSeconds > 0)
+            JumpCountDisplay(jumpCount)
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -201,12 +200,9 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, onNavigateToHistory: () -> Unit) 
 
     // Settings dialog overlay
     if (showSettingsDialog) {
-        val beepInterval by viewModel.beepInterval.collectAsState()
         SettingsDialog(
             sensitivity = sensitivity,
             onSensitivityChange = { viewModel.setSensitivity(it) },
-            beepInterval = beepInterval,
-            onBeepIntervalChange = { viewModel.setBeepInterval(it) },
             onDismiss = { showSettingsDialog = false }
         )
     }
@@ -225,8 +221,6 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, onNavigateToHistory: () -> Unit) 
 private fun SettingsDialog(
     sensitivity: Int,
     onSensitivityChange: (Int) -> Unit,
-    beepInterval: Int,
-    onBeepIntervalChange: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
     // Slider goes from high sensitivity (low threshold) to low sensitivity (high threshold).
@@ -273,37 +267,6 @@ private fun SettingsDialog(
                         activeTrackColor = Color(0xFF42A5F5)
                     )
                 )
-
-                Spacer(modifier = Modifier.height(20.dp))
-                Text(
-                    text = "Beep Every X Jumps",
-                    color = TextPrimary,
-                    fontSize = 16.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    val options = listOf(0 to "Off", 100 to "100", 200 to "200", 400 to "400")
-                    for ((value, label) in options) {
-                        val selected = beepInterval == value
-                        Button(
-                            onClick = { onBeepIntervalChange(value) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (selected) Color(0xFF42A5F5) else Color(0xFF2A2A2A)
-                            )
-                        ) {
-                            Text(
-                                text = label,
-                                fontSize = 13.sp,
-                                color = if (selected) Color.White else TextSecondary
-                            )
-                        }
-                    }
-                }
             }
         }
     }
@@ -494,7 +457,7 @@ private fun BpmDisplay(bpm: Int?) {
 }
 
 @Composable
-private fun JumpCountDisplay(jumpCount: Int, jumpsPerMinute: Double, showJpm: Boolean) {
+private fun JumpCountDisplay(jumpCount: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = jumpCount.toString(),
@@ -509,14 +472,6 @@ private fun JumpCountDisplay(jumpCount: Int, jumpsPerMinute: Double, showJpm: Bo
             fontSize = 18.sp,
             fontWeight = FontWeight.Light
         )
-        if (showJpm) {
-            Text(
-                text = "%.1f /min".format(jumpsPerMinute),
-                color = Color(0xFF42A5F5),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Light
-            )
-        }
     }
 }
 
