@@ -103,4 +103,20 @@ class TcxExportTest {
 
         assertTrue(tcx.contains("<TotalTimeSeconds>1234</TotalTimeSeconds>"))
     }
+
+    @Test
+    fun `Notes contains jump time when present`() {
+        val w = workout().copy(jumpTimeSeconds = 90L)
+        val tcx = buildTcx(listOf(w), mapOf(w.id to emptyList()))
+
+        assertTrue(tcx.contains("<Notes>Jump time: 90s</Notes>"))
+    }
+
+    @Test
+    fun `Notes absent when jumpTimeSeconds is null`() {
+        val w = workout()
+        val tcx = buildTcx(listOf(w), mapOf(w.id to emptyList()))
+
+        assertFalse(tcx.contains("<Notes>"))
+    }
 }

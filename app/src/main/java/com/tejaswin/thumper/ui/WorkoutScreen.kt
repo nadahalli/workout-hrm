@@ -276,6 +276,8 @@ private fun SettingsDialog(
 private fun SummaryDialog(summary: WorkoutSummary, onDismiss: () -> Unit) {
     val minutes = summary.durationSeconds / 60
     val seconds = summary.durationSeconds % 60
+    val jumpMin = summary.jumpTimeSeconds / 60
+    val jumpSec = summary.jumpTimeSeconds % 60
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -301,12 +303,17 @@ private fun SummaryDialog(summary: WorkoutSummary, onDismiss: () -> Unit) {
                 ) {
                     SummaryItem(
                         value = "%d:%02d".format(minutes, seconds),
-                        label = "Duration",
+                        label = "Elapsed",
+                        color = TextPrimary
+                    )
+                    SummaryItem(
+                        value = "%d:%02d".format(jumpMin, jumpSec),
+                        label = "Jump Time",
                         color = TextPrimary
                     )
                     SummaryItem(
                         value = summary.avgHeartRate?.toString() ?: "--",
-                        label = "Avg BPM",
+                        label = "Avg HR",
                         color = AccentRed
                     )
                 }

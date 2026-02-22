@@ -26,6 +26,8 @@ class JumpDetector {
         get() = analyzer.threshold
         set(value) { analyzer.threshold = value }
 
+    val jumpTimeMs: Long get() = analyzer.jumpTimeMs
+
     private var audioRecord: AudioRecord? = null
     @Volatile
     private var isListening = false

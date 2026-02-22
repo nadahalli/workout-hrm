@@ -9,5 +9,6 @@ data class WorkoutEntity(
     val startTimeMillis: Long,
     val durationSeconds: Long,
     val avgHeartRate: Int?,
-    val jumpCount: Int?
+    val jumpCount: Int?,
+    val jumpTimeSeconds: Long? = null
 )

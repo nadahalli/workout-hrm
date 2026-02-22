@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 
 data class WorkoutSummary(
     val durationSeconds: Long,
+    val jumpTimeSeconds: Long,
     val avgHeartRate: Int?,
     val jumpCount: Int?,
     val jumpsPerMinute: Double?
@@ -225,7 +226,7 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
 
         val duration = _elapsedSeconds.value
         if (duration > 0) {
-            val summary = computeSummary(duration, hrReadings, jumpCount.value)
+            val summary = computeSummary(duration, hrReadings, jumpCount.value, jumpDetector.jumpTimeMs)
             _workoutSummary.value = summary
 
             viewModelScope.launch {
@@ -235,7 +236,8 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
                         startTimeMillis = workoutStartTimeMillis,
                         durationSeconds = summary.durationSeconds,
                         avgHeartRate = summary.avgHeartRate,
-                        jumpCount = summary.jumpCount
+                        jumpCount = summary.jumpCount,
+                        jumpTimeSeconds = summary.jumpTimeSeconds
                     )
                 )
             }
@@ -288,6 +290,9 @@ internal fun buildTcx(
             appendLine("        <Calories>0</Calories>")
             appendLine("        <Intensity>Active</Intensity>")
             appendLine("        <TriggerMethod>Manual</TriggerMethod>")
+            if (workout.jumpTimeSeconds != null) {
+                appendLine("        <Notes>Jump time: ${workout.jumpTimeSeconds}s</Notes>")
+            }
             appendLine("        <Track>")
             val samples = samplesByWorkout[workout.id] ?: emptyList()
             for (sample in samples) {
@@ -310,16 +315,19 @@ internal fun buildTcx(
 internal fun computeSummary(
     durationSeconds: Long,
     hrReadings: List<Int>,
-    jumpCount: Int
+    jumpCount: Int,
+    jumpTimeMs: Long
 ): WorkoutSummary {
     val avgHr = if (hrReadings.isNotEmpty()) hrReadings.average().toInt() else null
-    val jpm = if (durationSeconds > 0 && jumpCount > 0) {
-        jumpCount.toDouble() / (durationSeconds / 60.0)
+    val jumpTimeSec = jumpTimeMs / 1000L
+    val jpm = if (jumpTimeSec > 0 && jumpCount > 0) {
+        jumpCount.toDouble() / (jumpTimeSec / 60.0)
     } else {
         null
     }
     return WorkoutSummary(
         durationSeconds = durationSeconds,
+        jumpTimeSeconds = jumpTimeSec,
         avgHeartRate = avgHr,
         jumpCount = if (jumpCount > 0) jumpCount else null,
         jumpsPerMinute = jpm
