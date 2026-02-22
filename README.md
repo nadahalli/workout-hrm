@@ -68,6 +68,10 @@ Pure business logic is extracted into Android-free functions/classes for JUnit t
 - `WorkoutSummaryTest` - avg HR, jump count, jumps-per-minute math
 - `TcxExportTest` - TCX XML structure, timestamps, trackpoints
 
+## Privacy
+
+Thumper is entirely offline and makes zero network connections. See [PRIVACY.md](PRIVACY.md).
+
 ## Tech
 
 Kotlin, Jetpack Compose, Material3, Room, BLE GATT, AudioRecord, MediaStore for TCX export.
