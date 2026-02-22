@@ -10,13 +10,8 @@ A minimal jump rope workout app for Android with BLE heart rate monitoring and m
 - **Workout timer** with 5-second countdown, pause/resume
 - **Workout summary** dialog after stopping (duration, avg BPM, jumps, JPM)
 - **Workout history** stored locally with Room
-- **CSV export** of all workouts to Downloads
-- **Configurable beep** every N jumps (100, 200, or 400)
+- **TCX export** of individual or all workouts to Downloads (compatible with Garmin, Strava, etc.)
 - **Adjustable sensitivity** for jump detection threshold
-
-## Screenshots
-
-Dark UI with large BPM and jump count displays. Settings, scan, and summary are modal dialogs.
 
 ## Requirements
 
@@ -43,22 +38,37 @@ Single-activity Compose app, MVVM pattern.
 
 ```
 com.tejaswin.thumper/
-  MainActivity.kt           Navigation, permissions, keep-screen-on
+  MainActivity.kt             Navigation, permissions, keep-screen-on
   viewmodel/
-    WorkoutViewModel.kt      All state: timer, HR collection, beep, export
+    WorkoutViewModel.kt        State: timer, HR collection, TCX export, summary
   ui/
-    WorkoutScreen.kt         Main screen + settings/scan/summary dialogs
-    HistoryScreen.kt         Past workouts list + CSV export button
+    WorkoutScreen.kt           Main screen + settings/scan/summary dialogs
+    HistoryScreen.kt           Past workouts list + TCX export buttons
   ble/
-    HrmBleManager.kt         BLE scan, connect, HR notifications
+    HrmBleManager.kt           BLE scan, connect, HR notifications
   audio/
-    JumpDetector.kt          Mic audio processing, amplitude threshold
+    JumpAnalyzer.kt            Pure amplitude/cooldown logic (no Android deps)
+    JumpDetector.kt            Mic recording, delegates to JumpAnalyzer
   data/
-    WorkoutDatabase.kt       Room DB (v2, migrated to add jumpCount)
-    WorkoutDao.kt            Queries
-    WorkoutEntity.kt         Schema
+    WorkoutDatabase.kt         Room DB (v3, with workout samples)
+    WorkoutDao.kt              Queries
+    WorkoutEntity.kt           Workout schema
+    WorkoutSampleEntity.kt     Per-workout trackpoint samples (HR, jump count)
 ```
+
+## Testing
+
+```
+JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew testDebugUnitTest
+```
+
+Pure business logic is extracted into Android-free functions/classes for JUnit testing:
+
+- `JumpAnalyzerTest` - amplitude threshold, cooldown, reset
+- `HeartRateParserTest` - BLE heart rate byte parsing (8-bit, 16-bit)
+- `WorkoutSummaryTest` - avg HR, jump count, jumps-per-minute math
+- `TcxExportTest` - TCX XML structure, timestamps, trackpoints
 
 ## Tech
 
-Kotlin, Jetpack Compose, Material3, Room, BLE GATT, AudioRecord, ToneGenerator, MediaStore for CSV export.
+Kotlin, Jetpack Compose, Material3, Room, BLE GATT, AudioRecord, MediaStore for TCX export.
