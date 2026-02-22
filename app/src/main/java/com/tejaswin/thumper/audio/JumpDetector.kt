@@ -8,7 +8,6 @@ import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.math.abs
 
 @SuppressLint("MissingPermission")
 class JumpDetector {
@@ -16,14 +15,16 @@ class JumpDetector {
     companion object {
         private const val TAG = "JumpDetector"
         private const val SAMPLE_RATE = 44100
-        private const val COOLDOWN_MS = 200L
     }
+
+    private val analyzer = JumpAnalyzer()
 
     private val _jumpCount = MutableStateFlow(0)
     val jumpCount: StateFlow<Int> = _jumpCount.asStateFlow()
 
-    @Volatile
-    var threshold: Int = 8000
+    var threshold: Int
+        get() = analyzer.threshold
+        set(value) { analyzer.threshold = value }
 
     private var audioRecord: AudioRecord? = null
     @Volatile
@@ -31,6 +32,7 @@ class JumpDetector {
 
     fun resetCount() {
         _jumpCount.value = 0
+        analyzer.reset()
     }
 
     fun start() {
@@ -62,21 +64,12 @@ class JumpDetector {
 
         Thread {
             val buffer = ShortArray(bufferSize / 2)
-            var lastJumpTime = 0L
 
             while (isListening) {
                 val read = audioRecord?.read(buffer, 0, buffer.size) ?: -1
                 if (read <= 0) continue
 
-                var maxAmplitude: Short = 0
-                for (i in 0 until read) {
-                    val sample = abs(buffer[i].toInt()).toShort()
-                    if (sample > maxAmplitude) maxAmplitude = sample
-                }
-
-                val now = System.currentTimeMillis()
-                if (maxAmplitude > threshold && now - lastJumpTime > COOLDOWN_MS) {
-                    lastJumpTime = now
+                if (analyzer.processBuffer(buffer, read, System.currentTimeMillis())) {
                     _jumpCount.value += 1
                 }
             }

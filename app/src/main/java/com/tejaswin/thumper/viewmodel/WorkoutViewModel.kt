@@ -225,25 +225,17 @@ class WorkoutViewModel(application: Application) : AndroidViewModel(application)
 
         val duration = _elapsedSeconds.value
         if (duration > 0) {
-            val avgHr = if (hrReadings.isNotEmpty()) hrReadings.average().toInt() else null
-            val jumps = jumpCount.value
-            val jpm = if (duration > 0 && jumps > 0) jumps.toDouble() / (duration / 60.0) else null
-
-            _workoutSummary.value = WorkoutSummary(
-                durationSeconds = duration,
-                avgHeartRate = avgHr,
-                jumpCount = if (jumps > 0) jumps else null,
-                jumpsPerMinute = jpm
-            )
+            val summary = computeSummary(duration, hrReadings, jumpCount.value)
+            _workoutSummary.value = summary
 
             viewModelScope.launch {
                 workoutDao.update(
                     WorkoutEntity(
                         id = currentWorkoutId,
                         startTimeMillis = workoutStartTimeMillis,
-                        durationSeconds = duration,
-                        avgHeartRate = avgHr,
-                        jumpCount = if (jumps > 0) jumps else null
+                        durationSeconds = summary.durationSeconds,
+                        avgHeartRate = summary.avgHeartRate,
+                        jumpCount = summary.jumpCount
                     )
                 )
             }
@@ -313,4 +305,23 @@ internal fun buildTcx(
         appendLine("  </Activities>")
         appendLine("</TrainingCenterDatabase>")
     }
+}
+
+internal fun computeSummary(
+    durationSeconds: Long,
+    hrReadings: List<Int>,
+    jumpCount: Int
+): WorkoutSummary {
+    val avgHr = if (hrReadings.isNotEmpty()) hrReadings.average().toInt() else null
+    val jpm = if (durationSeconds > 0 && jumpCount > 0) {
+        jumpCount.toDouble() / (durationSeconds / 60.0)
+    } else {
+        null
+    }
+    return WorkoutSummary(
+        durationSeconds = durationSeconds,
+        avgHeartRate = avgHr,
+        jumpCount = if (jumpCount > 0) jumpCount else null,
+        jumpsPerMinute = jpm
+    )
 }

@@ -225,14 +225,15 @@ class HrmBleManager(private val context: Context) {
         _heartRate.value = null
     }
 
-    private fun parseHeartRate(data: ByteArray): Int {
-        if (data.isEmpty()) return 0
-        val flags = data[0].toInt()
-        // Bit 0: 0 = uint8, 1 = uint16
-        return if (flags and 0x01 == 0) {
-            data[1].toInt() and 0xFF
-        } else {
-            (data[1].toInt() and 0xFF) or ((data[2].toInt() and 0xFF) shl 8)
-        }
+}
+
+internal fun parseHeartRate(data: ByteArray): Int {
+    if (data.isEmpty()) return 0
+    val flags = data[0].toInt()
+    // Bit 0: 0 = uint8, 1 = uint16
+    return if (flags and 0x01 == 0) {
+        data[1].toInt() and 0xFF
+    } else {
+        (data[1].toInt() and 0xFF) or ((data[2].toInt() and 0xFF) shl 8)
     }
 }
