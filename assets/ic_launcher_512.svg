@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+  <!-- Background -->
+  <rect width="108" height="108" fill="#121212"/>
+
+  <!-- Heart -->
+  <path fill="#EF5350" d="
+    M54,69
+    C54,69 43,62 43,55
+    C43,51 46,48 50,48
+    C52,48 54,50 54,50
+    C54,50 56,48 58,48
+    C62,48 65,51 65,55
+    C65,62 54,69 54,69
+    Z"/>
+
+  <!-- Jump rope -->
+  <path d="M34,72 C34,46 42,24 54,24 C66,24 74,46 74,72"
+    stroke="#42A5F5" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+  <!-- Left handle -->
+  <path fill="#42A5F5" d="
+    M31.5,71
+    L36.5,71
+    Q38,71 38,72.5
+    L38,79.5
+    Q38,81 36.5,81
+    L31.5,81
+    Q30,81 30,79.5
+    L30,72.5
+    Q30,71 31.5,71
+    Z"/>
+
+  <!-- Right handle -->
+  <path fill="#42A5F5" d="
+    M71.5,71
+    L76.5,71
+    Q78,71 78,72.5
+    L78,79.5
+    Q78,81 76.5,81
+    L71.5,81
+    Q70,81 70,79.5
+    L70,72.5
+    Q70,71 71.5,71
+    Z"/>
+</svg>
